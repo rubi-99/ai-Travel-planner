@@ -11,8 +11,9 @@ import streamlit as st
 from datetime import datetime
 from langchain_core.messages import HumanMessage
 from app.graph import build_graph
-app = build_graph()
-graph = app
+
+graph = build_graph()
+app = graph
 
 st.set_page_config(
     page_title="AI Travel Booking System",
@@ -189,7 +190,7 @@ div[data-testid="stButton"] > button:active {
     text-align: center;
 }
 .metric-val { font-size: 1.8rem; font-weight: 700; color: #4ea8f0; }
-.metric-lbl { font-size: 0.78rem; color: #5a7a96; margin-top: 0.2rem; text-transform: uppercase; letter-spacing: 0.08em; }
+.metric-lbl { font-size: 0.78rem; color: #7aa8cc !important; margin-top: 0.2rem; text-transform: uppercase; letter-spacing: 0.08em; }
 
 /* ── Final plan ── */
 .final-card {
@@ -209,7 +210,7 @@ div[data-testid="stButton"] > button:active {
     border: 1px solid #1e2e44;
     border-radius: 10px;
     padding: 0.85rem 1.2rem;
-    color: #5a8ab0;
+    color: #8ab8d8 !important;
     font-size: 0.88rem;
     margin-top: 0.5rem;
 }
@@ -261,7 +262,7 @@ input[type="text"]:focus, .stTextInput input:focus {
 }
 input[type="text"]::placeholder { color: #3a5570 !important; }
 
-/* All Streamlit labels — dark bg → light text */
+/* Streamlit labels */
 .stTextInput label, .stTextArea label,
 .stSelectbox label, .stNumberInput label {
     color: #7ab8f5 !important;
@@ -270,7 +271,6 @@ input[type="text"]::placeholder { color: #3a5570 !important; }
     letter-spacing: 0.08em !important;
 }
 
-/* General markdown / paragraph text */
 .stMarkdown p, .stMarkdown li, .stMarkdown td, .stMarkdown th {
     color: #cce0f5 !important;
 }
@@ -282,25 +282,17 @@ input[type="text"]::placeholder { color: #3a5570 !important; }
     border-radius: 4px;
 }
 
-/* Metric labels — was #5a7a96 (too dim on dark bg) */
-.metric-lbl { color: #7aa8cc !important; }
-
-/* Save bar — was #5a8ab0 (slightly dim) */
-.save-bar { color: #8ab8d8 !important; }
 .save-bar code { color: #7ab8f5 !important; background: #0a1520 !important; }
 
-/* Streamlit warning / info / success on dark bg */
 .stAlert { background: #0e1a2b !important; border-radius: 10px !important; }
 .stAlert p, .stAlert div { color: #e0edf8 !important; }
 
-/* Sidebar text & dividers */
 section[data-testid="stSidebar"] p,
 section[data-testid="stSidebar"] span,
 section[data-testid="stSidebar"] label,
 section[data-testid="stSidebar"] .stMarkdown { color: #a0c4e0 !important; }
 section[data-testid="stSidebar"] hr { border-color: #1a2e44 !important; }
 
-/* Download button — light bg → dark text  */
 div[data-testid="stDownloadButton"] > button {
     background: #1a3a5c !important;
     color: #e8f4ff !important;
@@ -315,7 +307,7 @@ with st.sidebar:
     st.markdown("<div class='sidebar-title'>🌍 AI Travel Planner</div>", unsafe_allow_html=True)
     st.markdown("---")
 
-    thread_id = st.text_input("👤 User ID", value="rubi101",
+    thread_id = st.text_input("👤 User ID", value="aarohi_user",
                               help="Your session ID — keeps travel history across queries")
 
     st.markdown("<div class='sidebar-title'>Powered by</div>", unsafe_allow_html=True)
@@ -323,7 +315,7 @@ with st.sidebar:
         st.markdown(f"<div class='sidebar-chip'>{tech}</div>", unsafe_allow_html=True)
 
     st.markdown("<div class='sidebar-title'>Agent Pipeline</div>", unsafe_allow_html=True)
-    for step in ["① Flight Agent", "② Hotel Agent", "③ Itinerary Agent", "④ Final Agent"]:
+    for step in ["🛡️ Guardrail", "① Flight Agent", "② Hotel Agent", "③ Itinerary Agent", "④ Final Agent"]:
         st.markdown(f"<div class='sidebar-chip'>{step}</div>", unsafe_allow_html=True)
 
 # ── Hero ──────────────────────────────────────────────────────────────────────
@@ -334,7 +326,7 @@ st.markdown("""
          alt="airplane above clouds"/>
     <div class="hero-content">
         <div class="hero-badge">✦ Multi-Agent AI System</div>
-        <div class="hero-title">✈️ AI Travel Planner</div>
+        <div class="hero-title">✈️ AI Travel Booking System</div>
         <div class="hero-sub">Four specialized agents work together — searching flights, hotels, building an itinerary, and delivering your perfect trip plan.</div>
     </div>
 </div>
@@ -383,30 +375,28 @@ user_query = st.text_area(
 
 generate = st.button("🚀  Generate My Travel Plan", use_container_width=True)
 
-# ── Agent pipeline ────────────────────────────────────────────────────────────
-AGENT_META = {
-    "flight_agent":    ("✈️", "Flight Agent"),
-    "hotel_agent":     ("🏨", "Hotel Agent"),
-    "itinerary_agent": ("🗓️", "Itinerary Agent"),
-    "final_agent":     ("🧠", "Final Agent"),
-}
-
+# ── Execution ─────────────────────────────────────────────────────────────────
 if generate:
     if not user_query.strip():
         st.warning("Please describe your trip first.")
     else:
         config = {"configurable": {"thread_id": thread_id}}
-        collected = {"flight_results": "", "hotel_results": "",
-                     "itinerary": "", "final_response": "", "llm_calls": 0}
+        collected = {
+            "flight_results": "",
+            "hotel_results": "",
+            "itinerary": "",
+            "final_response": "",
+            "llm_calls": 0,
+            "is_travel_related": True,
+            "rejection_msg": ""
+        }
 
-        st.markdown("---")
-        st.markdown("<div class='sec-head'><span>🤖 Agent Pipeline — Live</span></div>",
-                    unsafe_allow_html=True)
-
+        # Run stream loop
         for chunk in app.stream(
             {
                 "messages": [HumanMessage(content=user_query)],
                 "user_query": user_query,
+                "is_travel_related": True,
                 "flight_results": "",
                 "hotel_results": "",
                 "itinerary": "",
@@ -416,55 +406,67 @@ if generate:
             stream_mode="updates",
         ):
             for node_name, state_update in chunk.items():
-                icon, label = AGENT_META.get(node_name, ("🔧", node_name))
-
-                with st.status(f"{icon}  {label}", state="complete", expanded=True):
-                    if node_name == "flight_agent":
-                        text = state_update.get("flight_results", "")
-                        collected["flight_results"] = text
-                        st.markdown(text or "_No flight data returned._")
-
-                    elif node_name == "hotel_agent":
-                        text = state_update.get("hotel_results", "")
-                        collected["hotel_results"] = text
-                        st.markdown(text or "_No hotel data returned._")
-
-                    elif node_name == "itinerary_agent":
-                        text = state_update.get("itinerary", "")
-                        collected["itinerary"] = text
-                        st.markdown(text or "_No itinerary generated._")
-
-                    elif node_name == "final_agent":
+                if node_name == "guardrail_agent":
+                    is_valid = state_update.get("is_travel_related", True)
+                    collected["is_travel_related"] = is_valid
+                    if not is_valid:
                         msgs = state_update.get("messages", [])
-                        text = msgs[-1].content if msgs else ""
-                        collected["final_response"] = text
-                        st.markdown(text or "_No final response._")
+                        collected["rejection_msg"] = msgs[-1].content if msgs else "Non-travel query."
 
-                    collected["llm_calls"] = state_update.get("llm_calls", collected["llm_calls"])
+                elif node_name == "flight_agent":
+                    collected["flight_results"] = state_update.get("flight_results", "")
 
-        # Metrics
-        st.markdown(f"""
-        <div class="metric-row">
-            <div class="metric-box"><div class="metric-val">4</div><div class="metric-lbl">Agents Run</div></div>
-            <div class="metric-box"><div class="metric-val">{collected['llm_calls']}</div><div class="metric-lbl">LLM Calls</div></div>
-            <div class="metric-box"><div class="metric-val">✅</div><div class="metric-lbl">Status</div></div>
-        </div>
-        """, unsafe_allow_html=True)
+                elif node_name == "hotel_agent":
+                    collected["hotel_results"] = state_update.get("hotel_results", "")
 
-        # Final plan card
-        if collected["final_response"]:
-            st.markdown("<div class='sec-head'><span>🧠 Final Travel Plan</span></div>",
-                        unsafe_allow_html=True)
-            st.markdown(f"<div class='final-card'>{collected['final_response']}</div>",
-                        unsafe_allow_html=True)
+                elif node_name == "itinerary_agent":
+                    collected["itinerary"] = state_update.get("itinerary", "")
 
-        # Save
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"travel_plan_{timestamp}.md"
-        save_dir = os.path.join(os.path.dirname(__file__), "travel_plans")
-        os.makedirs(save_dir, exist_ok=True)
+                elif node_name == "final_agent":
+                    msgs = state_update.get("messages", [])
+                    collected["final_response"] = msgs[-1].content if msgs else ""
 
-        file_content = f"""# Travel Plan
+                collected["llm_calls"] = state_update.get("llm_calls", collected["llm_calls"])
+
+        st.markdown("---")
+
+        if not collected["is_travel_related"]:
+            # Query is NOT travel-related: Show ONLY the meaningful rejection message
+            st.warning(collected["rejection_msg"])
+        else:
+            # Query IS travel-related: Show agent pipeline and results
+            st.markdown("<div class='sec-head'><span>🤖 Agent Pipeline — Execution Complete</span></div>", unsafe_allow_html=True)
+            
+            with st.expander("✈️ Flight Agent Results", expanded=True):
+                st.markdown(collected["flight_results"] or "_No flight data returned._")
+
+            with st.expander("🏨 Hotel Agent Results", expanded=True):
+                st.markdown(collected["hotel_results"] or "_No hotel data returned._")
+
+            with st.expander("🗓️ Itinerary Agent Results", expanded=True):
+                st.markdown(collected["itinerary"] or "_No itinerary generated._")
+
+            # Metrics
+            st.markdown(f"""
+            <div class="metric-row">
+                <div class="metric-box"><div class="metric-val">4</div><div class="metric-lbl">Agents Run</div></div>
+                <div class="metric-box"><div class="metric-val">{collected['llm_calls']}</div><div class="metric-lbl">LLM Calls</div></div>
+                <div class="metric-box"><div class="metric-val">✅</div><div class="metric-lbl">Status</div></div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            # Final plan card
+            if collected["final_response"]:
+                st.markdown("<div class='sec-head'><span>🧠 Final Travel Plan</span></div>", unsafe_allow_html=True)
+                st.markdown(f"<div class='final-card'>{collected['final_response']}</div>", unsafe_allow_html=True)
+
+            # Save travel plan
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"travel_plan_{timestamp}.md"
+            save_dir = os.path.join(os.path.dirname(__file__), "travel_plans")
+            os.makedirs(save_dir, exist_ok=True)
+
+            file_content = f"""# Travel Plan
 **Query:** {user_query}
 **Generated:** {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
 **User ID:** {thread_id}
@@ -490,16 +492,17 @@ if generate:
 {collected['final_response'] or 'N/A'}
 
 ---
+
 *LLM Calls: {collected['llm_calls']}*
 """
-        with open(os.path.join(save_dir, filename), "w", encoding="utf-8") as f:
-            f.write(file_content)
+            with open(os.path.join(save_dir, filename), "w", encoding="utf-8") as f:
+                f.write(file_content)
 
-        dl_col, info_col = st.columns([1, 3])
-        with dl_col:
-            st.download_button("⬇️ Download Plan", data=file_content,
-                               file_name=filename, mime="text/markdown",
-                               use_container_width=True)
-        with info_col:
-            st.markdown(f"<div class='save-bar'>📁 Auto-saved → <code>travel_plans/{filename}</code></div>",
-                        unsafe_allow_html=True)
+            dl_col, info_col = st.columns([1, 3])
+            with dl_col:
+                st.download_button("⬇️ Download Plan", data=file_content,
+                                   file_name=filename, mime="text/markdown",
+                                   use_container_width=True)
+            with info_col:
+                st.markdown(f"<div class='save-bar'>📁 Auto-saved → <code>travel_plans/{filename}</code></div>",
+                            unsafe_allow_html=True)

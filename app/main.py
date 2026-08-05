@@ -17,6 +17,7 @@ def main():
                 HumanMessage(content=user_input)
             ],
             "user_query": user_input,
+            "is_travel_related": True,
             "flight_results": "",
             "hotel_results": "",
             "itinerary": "",
@@ -24,6 +25,10 @@ def main():
         },
         config=config
     )
+
+    if not result.get("is_travel_related", True):
+        print("\n" + result["messages"][-1].content)
+        return
 
     print("\nFINAL RESPONSE:\n")
     for msg in result["messages"]:

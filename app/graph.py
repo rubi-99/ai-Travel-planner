@@ -4,6 +4,7 @@ from langgraph.checkpoint.memory import MemorySaver
 
 from app.state import TravelState
 from app.agents import (
+    guardrail_agent,
     flight_agent,
     hotel_agent,
     itinerary_agent,
@@ -12,17 +13,31 @@ from app.agents import (
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
+def route_intent(state: TravelState):
+    if state.get("is_travel_related", True):
+        return "flight_agent"
+    return END
+
 def build_graph():
     graph_builder = StateGraph(TravelState)
 
     # Add agent nodes
+    graph_builder.add_node("guardrail_agent", guardrail_agent)
     graph_builder.add_node("flight_agent", flight_agent)
     graph_builder.add_node("hotel_agent", hotel_agent)
     graph_builder.add_node("itinerary_agent", itinerary_agent)
     graph_builder.add_node("final_agent", final_agent)
 
-    # Add edges
-    graph_builder.add_edge(START, "flight_agent")
+    # Add edges with guardrail conditional routing
+    graph_builder.add_edge(START, "guardrail_agent")
+    graph_builder.add_conditional_edges(
+        "guardrail_agent",
+        route_intent,
+        {
+            "flight_agent": "flight_agent",
+            END: END
+        }
+    )
     graph_builder.add_edge("flight_agent", "hotel_agent")
     graph_builder.add_edge("hotel_agent", "itinerary_agent")
     graph_builder.add_edge("itinerary_agent", "final_agent")
